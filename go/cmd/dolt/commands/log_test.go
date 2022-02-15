@@ -17,6 +17,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"github.com/dolthub/dolt/go/cmd/dolt/cli"
 	"github.com/dolthub/dolt/go/libraries/doltcore/doltdb"
 	"github.com/dolthub/dolt/go/libraries/doltcore/env"
 	"github.com/dolthub/dolt/go/libraries/utils/osutil"
@@ -25,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -59,15 +61,15 @@ func TestLogSigterm(t *testing.T) {
 	cMeta, _ := commit.GetCommitMeta()
 	cHash, _ := commit.HashOf()
 
+	restoreIO := cli.InitIO()
+	defer restoreIO()
+
 	pager := outputpager.Start()
 	defer pager.Stop()
 
-	// Process.Signal(os.Interrupt) is not supported on Windows
-	pager.ExecCommand.Process.Signal(os.Interrupt)
-
 	chStr := cHash.String()
 
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 20; i++ {
 		pager.Writer.Write([]byte(fmt.Sprintf("\033[1;33mcommit %s \033[0m", chStr)))
 		pager.Writer.Write([]byte(fmt.Sprintf("\nAuthor: %s <%s>", cMeta.Name, cMeta.Email)))
 
@@ -77,4 +79,10 @@ func TestLogSigterm(t *testing.T) {
 		formattedDesc := "\n\n\t" + strings.Replace(cMeta.Description, "\n", "\n\t", -1) + "\n\n"
 		pager.Writer.Write([]byte(fmt.Sprintf(formattedDesc)))
 	}
+
+	process, err := os.FindProcess(syscall.Getpid())
+	require.NoError(t, err)
+
+	err = process.Signal(syscall.SIGTERM)
+	require.NoError(t, err)
 }

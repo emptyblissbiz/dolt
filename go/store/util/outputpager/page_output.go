@@ -22,7 +22,6 @@
 package outputpager
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -50,6 +49,7 @@ type Pager struct {
 
 func Start() *Pager {
 	if noPager || !IsStdoutTty() {
+		panic("ds")
 		return &Pager{os.Stdout, nil, nil, nil, nil, nil}
 	}
 
@@ -57,7 +57,7 @@ func Start() *Pager {
 	var err error
 	var cmd *exec.Cmd
 
-	lessPath, err = exec.LookPath("less")
+	lessPath, err = exec.LookPath("more")
 	if err != nil {
 		lessPath, err = exec.LookPath("more")
 		d.Chk.NoError(err)
@@ -76,7 +76,8 @@ func Start() *Pager {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = stdin
-	cmd.Start()
+	err = cmd.Start()
+	d.Chk.NoError(err)
 
 	p := &Pager{stdout, stdin, stdout, &sync.Mutex{}, make(chan struct{}), cmd}
 
@@ -88,6 +89,7 @@ func Start() *Pager {
 			select {
 			case _, ok := <-interruptChannel:
 				if ok {
+					panic("wprrpr")
 					p.closePipe()
 					p.doneCh <- struct{}{}
 				}
@@ -98,9 +100,7 @@ func Start() *Pager {
 
 	go func() {
 		err := cmd.Wait()
-		if err != nil {
-			fmt.Println("cmd.Wait: ", err)
-		}
+		d.Chk.NoError(err) // TODO: Double check this
 		p.closePipe()
 		p.doneCh <- struct{}{}
 	}()

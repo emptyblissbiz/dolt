@@ -280,7 +280,7 @@ teardown() {
     dolt commit -m "Inserted 1,1"
 
     dolt checkout main
-    # Should be fast-forward 
+    # Should be fast-forward
     dolt merge branch1
     # An actual merge
     dolt merge branch2
@@ -303,7 +303,7 @@ teardown() {
     [ $status -eq 0 ]
     [[ "$output" =~ "0,0" ]] || false
     [[ ! "$output" =~ "Initialize data repository" ]] || false
-    
+
     # each commit gets its parents in the log
     run dolt log --parents
     [ $status -eq 0 ]
@@ -333,3 +333,31 @@ teardown() {
     run expect $BATS_TEST_DIRNAME/log.expect
     [ "$status" -eq 0 ]
 }
+
+@test "log: try a sigterm on a more process" {
+    for VARIABLE in 1 2 3 4 5 .. 20
+    do
+      dolt commit -am "commit" --allow-empty
+    done
+
+    function_to_fork &
+    run dolt log -n 5 2>&1
+    echo $output >& 1
+    [ "$status" -eq 1 ]
+}
+
+function_to_fork() {
+    # sleep for two seconds until dolt runs
+    sleep 2
+
+    # get pid of dolt process
+    DOLT_PID=$(ps -ef | grep "dolt log" | awk 'NR==1{print $2}')
+
+    echo ps -a
+    echo DOLT_PID
+
+    # send a signal
+    kill -SIGTERM $DOLT_PID
+}
+
+
