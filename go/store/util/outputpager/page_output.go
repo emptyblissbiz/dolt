@@ -45,11 +45,12 @@ type Pager struct {
 	stdin, stdout *os.File
 	mtx           *sync.Mutex
 	doneCh        chan struct{}
+	ExecCommand   *exec.Cmd
 }
 
 func Start() *Pager {
 	if noPager || !IsStdoutTty() {
-		return &Pager{os.Stdout, nil, nil, nil, nil}
+		return &Pager{os.Stdout, nil, nil, nil, nil, nil}
 	}
 
 	var lessPath string
@@ -77,7 +78,7 @@ func Start() *Pager {
 	cmd.Stdin = stdin
 	cmd.Start()
 
-	p := &Pager{stdout, stdin, stdout, &sync.Mutex{}, make(chan struct{})}
+	p := &Pager{stdout, stdin, stdout, &sync.Mutex{}, make(chan struct{}), cmd}
 
 	interruptChannel := make(chan os.Signal, 1)
 	signal.Notify(interruptChannel, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)

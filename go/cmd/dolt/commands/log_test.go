@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"os"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -63,6 +62,9 @@ func TestLogSigterm(t *testing.T) {
 	pager := outputpager.Start()
 	defer pager.Stop()
 
+	// Process.Signal(os.Interrupt) is not supported on Windows
+	pager.ExecCommand.Process.Signal(os.Interrupt)
+
 	chStr := cHash.String()
 
 	for i := 0; i < 2; i++ {
@@ -75,11 +77,4 @@ func TestLogSigterm(t *testing.T) {
 		formattedDesc := "\n\n\t" + strings.Replace(cMeta.Description, "\n", "\n\t", -1) + "\n\n"
 		pager.Writer.Write([]byte(fmt.Sprintf(formattedDesc)))
 	}
-
-	// Process.Signal(os.Interrupt) is not supported on Windows
-
-	p, _ := os.FindProcess(syscall.Getpid())
-	err = p.Signal(os.Interrupt)
-
-
 }
